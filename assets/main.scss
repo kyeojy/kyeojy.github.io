@@ -1,0 +1,204 @@
+---
+---
+
+$base-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  Roboto, Helvetica, Arial, sans-serif;
+$base-font-size:   17px;
+$base-line-height: 1.6;
+$spacing-unit:     30px;
+
+$text-color:       #c9d1d9;
+$background-color: #0d1117;
+$brand-color:      #58d364;
+
+$grey-color:       #8b949e;
+$grey-color-light: #30363d;
+$grey-color-dark:  #b1bac4;
+
+$table-text-align: left;
+
+$mono-font: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+
+@import "minima";
+
+:root,
+:root[data-theme="dark"] {
+  --bg:      #0d1117;
+  --bg-elev: #161b22;
+  --text:    #c9d1d9;
+  --heading: #e6edf3;
+  --muted:   #8b949e;
+  --border:  #30363d;
+  --link:    #58d364;
+  --accent:  #58d364;
+  --hover:   rgba(88, 211, 100, 0.06);
+}
+
+:root[data-theme="light"] {
+  --bg:      #ffffff;
+  --bg-elev: #f6f8fa;
+  --text:    #24292f;
+  --heading: #1f2328;
+  --muted:   #57606a;
+  --border:  #d0d7de;
+  --link:    #0969da;
+  --accent:  #1a7f37;
+  --hover:   rgba(26, 127, 55, 0.06);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body, .site-header, .site-footer, .site-nav,
+code, pre, .highlight, .theme-toggle,
+.vulns-table th, .vulns-table td {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--heading);
+  line-height: 1.25;
+}
+
+a, a:visited, a:hover { color: var(--link); }
+
+.site-header {
+  background-color: var(--bg);
+  border-top: 5px solid var(--accent);
+  border-bottom: 1px solid var(--border);
+}
+.site-title,
+.site-title:visited {
+  color: var(--heading);
+  font-weight: 700;
+}
+.site-nav .page-link { color: var(--text); }
+@media screen and (max-width: 600px) {
+  .site-nav { background-color: var(--bg-elev); border-color: var(--border); }
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 20px;
+  padding: 4px 7px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  vertical-align: middle;
+  line-height: 0;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.theme-toggle svg { width: 18px; height: 18px; fill: currentColor; }
+:root[data-theme="dark"]  .theme-toggle .icon-moon { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-sun  { display: none; }
+
+.site-footer   { border-top: 1px solid var(--border); }
+.footer-heading { color: var(--heading); }
+
+code, pre {
+  background-color: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: $mono-font;
+}
+code { padding: 1px 5px; font-size: 0.88em; }
+pre  { padding: 12px 16px; overflow-x: auto; }
+pre > code { border: 0; padding: 0; background: transparent; }
+.highlight, .highlighter-rouge .highlight { background: var(--bg-elev); }
+
+blockquote { color: var(--muted); border-left: 4px solid var(--accent); font-style: normal; }
+
+.post-content img { border-radius: 6px; }
+
+.table-wrapper { overflow-x: auto; margin-bottom: $spacing-unit; }
+
+.vulns-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+.vulns-table thead th {
+  text-align: left;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-bottom: 2px solid var(--accent);
+  font-family: $mono-font;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--heading);
+}
+.vulns-table td {
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text);
+}
+.vulns-table tbody tr:nth-child(even) { background: transparent; }
+.vulns-table tbody tr:hover { background: var(--hover); }
+.vulns-table a { word-break: break-word; }
+
+.post-meta { color: var(--muted); }
+
+.highlight {
+  .c, .c1, .cm, .cd, .cs, .ch  { color: #8b949e; font-style: italic; }
+  .err                          { color: #f85149; background: transparent; }
+  .k, .kc, .kd, .kn, .kp, .kr, .kt, .kv { color: #ff7b72; }
+  .o, .ow                       { color: #ff7b72; }
+  .p, .pi                       { color: #c9d1d9; }
+  .s, .s1, .s2, .sb, .sc, .sd, .se, .sh, .si, .sx, .sr, .ss, .dl { color: #a5d6ff; }
+  .n, .nl, .nx, .py             { color: #c9d1d9; }
+  .na                           { color: #79c0ff; }
+  .nb, .bp                      { color: #79c0ff; }
+  .nc, .nn, .no                 { color: #ffa657; }
+  .nf, .fm                      { color: #d2a8ff; }
+  .nt                           { color: #7ee787; }
+  .nv, .vc, .vg, .vi            { color: #ffa657; }
+  .m, .mi, .mf, .mh, .mo, .il, .mb, .mx { color: #79c0ff; }
+  .gd                           { color: #ffa198; background: #490202; }
+  .gi                           { color: #7ee787; background: #04260f; }
+  .gh                           { color: #79c0ff; font-weight: bold; }
+  .gp                           { color: #8b949e; }
+  .gu                           { color: #d2a8ff; font-weight: bold; }
+  .gs                           { font-weight: bold; }
+  .ge                           { font-style: italic; }
+  .w                            { color: #c9d1d9; }
+}
+
+:root[data-theme="light"] .highlight {
+  .c, .c1, .cm, .cd, .cs, .ch  { color: #6e7781; }
+  .err                          { color: #cf222e; }
+  .k, .kc, .kd, .kn, .kp, .kr, .kt, .kv { color: #cf222e; }
+  .o, .ow                       { color: #0550ae; }
+  .p, .pi                       { color: #24292f; }
+  .s, .s1, .s2, .sb, .sc, .sd, .se, .sh, .si, .sx, .sr, .ss, .dl { color: #0a3069; }
+  .n, .nl, .nx, .py             { color: #24292f; }
+  .na                           { color: #0550ae; }
+  .nb, .bp                      { color: #0550ae; }
+  .nc, .nn, .no                 { color: #953800; }
+  .nf, .fm                      { color: #8250df; }
+  .nt                           { color: #116329; }
+  .nv, .vc, .vg, .vi            { color: #953800; }
+  .m, .mi, .mf, .mh, .mo, .il, .mb, .mx { color: #0550ae; }
+  .gd                           { color: #82071e; background: #ffebe9; }
+  .gi                           { color: #116329; background: #dafbe1; }
+  .gh                           { color: #0550ae; }
+  .gp                           { color: #6e7781; }
+  .gu                           { color: #8250df; }
+  .w                            { color: #24292f; }
+}

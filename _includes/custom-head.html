@@ -1,0 +1,25 @@
+<script>
+  (function () {
+    try {
+      document.documentElement.setAttribute(
+        'data-theme', localStorage.getItem('theme') || 'dark');
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+  function toggleTheme() {
+    var root = document.documentElement;
+    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    var btn = document.getElementById('theme-toggle');
+    if (btn) { btn.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false'); }
+  }
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+
+<meta name="theme-color" content="#0d1117">
