@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#06080a"/>
+  <rect x="2.6" y="2.6" width="58.8" height="58.8" rx="14.4" fill="none" stroke="#18c86a" stroke-width="1.2"/>
+
+  <!-- CROWN: pinched fedora top, cool green-white facets -->
+  <polygon points="26,24.5 38,24.5 32,28.5" fill="#d2efe0"/>
+  <polygon points="26,24.5 32,28.5 32,40" fill="#effaf2"/>
+  <polygon points="26,24.5 32,40 21,40" fill="#ffffff"/>
+  <polygon points="38,24.5 32,28.5 32,40" fill="#d4ecdd"/>
+  <polygon points="38,24.5 32,40 43,40" fill="#bfd9c9"/>
+  <polygon points="26,24.5 28.5,27 27,31" fill="#ddf6e6"/>
+  <polygon points="38,24.5 35.5,27 37,31" fill="#b4cdbf"/>
+
+  <!-- BAND: angled chevron, peaking at centre like the crown sides -->
+  <polygon points="22.8,36 32,34.4 32,35.6 22.4,37.2" fill="#5cffa6"/>
+  <polygon points="32,34.4 41.2,36 41.6,37.2 32,35.6" fill="#2ee676"/>
+  <polygon points="22.4,37.2 32,35.6 32,36.8 21.9,38.4" fill="#00c853"/>
+  <polygon points="32,35.6 41.6,37.2 42.1,38.4 32,36.8" fill="#00a046"/>
+
+  <!-- BRIM: downward V, cool green-white facets -->
+  <polygon points="7,39.3 32,40 32,42 8.7,40.05" fill="#f4fff8"/>
+  <polygon points="57,39.3 32,40 32,42 55.3,40.05" fill="#d9ece1"/>
+  <polygon points="8.7,40.05 32,42 32,44 9.5,40.8" fill="#b4cdbf"/>
+  <polygon points="55.3,40.05 32,42 32,44 54.5,40.8" fill="#99b6a6"/>
+
+  <!-- neon rim light -->
+  <polyline points="21,40 26,24.5 32,28.5" fill="none" stroke="#66ffae" stroke-width="0.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="9.5,40.8 32,44 54.5,40.8" fill="none" stroke="#66ffae" stroke-width="0.5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

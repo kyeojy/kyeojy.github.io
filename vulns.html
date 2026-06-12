@@ -25,7 +25,10 @@ description: A running list of security vulnerabilities I've discovered and disc
         <td>Linux</td>
         <td>Netfilter</td>
         <td>CVE-2022-32250 / ZDI-26-191</td>
-        <td>Pwn2Own Vancouver 2022 LPE</td>
+        <td>
+          Pwn2Own Vancouver 2022 LPE for Ubuntu 22.04
+          <br><a href="https://www.zerodayinitiative.com/advisories/ZDI-26-191/">Security advisory</a>
+        </td>
       </tr>
       <tr>
         <td>Linux</td>
@@ -38,10 +41,10 @@ description: A running list of security vulnerabilities I've discovered and disc
       </tr>
       <tr>
         <td>Arm Mali GPU</td>
-        <td>Kernel driver</td>
+        <td>Kernel driver - Command Stream Frontend</td>
         <td>&ndash;</td>
         <td>
-          Variant of CVE-2022-42716 with no CVE assigned. Google Pixel 7 / 7 Pro LPE.
+          Use-After-Free bug. Variant of CVE-2022-42716 with no CVE assigned. Allows Google Pixel 7 / 7 Pro LPE.
           <br><a href="https://issuetracker.google.com/issues/270529096">Google Issue 270529096</a>
         </td>
       </tr>
@@ -50,7 +53,7 @@ description: A running list of security vulnerabilities I've discovered and disc
         <td>logcollector</td>
         <td>CVE-2023-42463 / ZDI-CAN-22015</td>
         <td>
-          Integer underflow LPE.
+          Integer underflow allowing LPE.
           <br><a href="https://github.com/wazuh/wazuh/security/advisories/GHSA-27p5-32pp-r58r">Security advisory</a>
         </td>
       </tr>
@@ -59,7 +62,7 @@ description: A running list of security vulnerabilities I've discovered and disc
         <td>&ndash;</td>
         <td>CVE-2025-52688</td>
         <td>
-          WiFi access point. Found during SPIRITCYBER-2024.
+          Multiple command injections in WiFi access point. Found during SPIRITCYBER-2024.
           <br><a href="https://www.al-enterprise.com/-/media/567414972b57459697030898f92ac043.pdf">Security advisory</a>
         </td>
       </tr>
@@ -68,7 +71,7 @@ description: A running list of security vulnerabilities I've discovered and disc
         <td>Software Update</td>
         <td>CVE-2025-43243</td>
         <td>
-          SIP write bypass enabling LPE on macOS.
+          TOCTOU issue leading to SIP write bypass, enabling LPE on macOS.
           <br><a href="https://support.apple.com/en-us/124149">Security advisory</a>
         </td>
       </tr>

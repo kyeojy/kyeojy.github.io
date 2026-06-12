@@ -10,7 +10,7 @@ This post explores the root cause and exploitation of CVE-2022-32250, a vulnerab
 
 It turns out that around the time of the competition, there was a separate disclosure from NCC Group to the kernel maintainer for the same issue, and ultimately they were given credit for CVE-2022-32250 as they were considered the first ones to report it. Some time after, there were multiple write-ups published on exploitation of the vulnerability (e.g. [here](https://www.nccgroup.com/research/settlers-of-netlink-exploiting-a-limited-uaf-in-nf_tables-cve-2022-32250/) and [here](https://theori.io/blog/linux-kernel-exploit-cve-2022-32250-with-mqueue)), and this post will offer a different method of exploitation, using only objects from netfilter modules. 
 
-### The Vulnerability
+# Netlink batch processing
 The vulnerability is a use-after-free (UAF) and to better understand the conditions that lead to this UAF, it is helpful to understand how netlink processes batches of messages, as well as how the creation and deletion of objects are handled. When interacting with the `nf_tables` API, we can send multiple batches of netlink messages, where each batch consists of a number of netlink messages. When netlink
 messages are processed by the kernel, they eventually reach the function `nfnetlink_rcv_batch`. The batch of netlink messages is then processed one at a time by this function.
 The function first retrieves the `nfnetlink_subsystem` responsible for processing the batch and then gets the relevant callback handler to handle each message in the batch. If an entire batch is processed successfully, `ss->commit(...) [1]` is called, which is a function pointer to `nf_tables_commit`. If an error is encountered while processing the batch, it adds the `NFNL_BATCH_FAILURE` flag to the status and instead of calling `ss->commit(...)`, it calls `ss->abort(...) [2]`, which is a function pointer to `nf_tables_abort`.
@@ -130,7 +130,7 @@ static const struct nfnl_callback nf_tables_cb[NFT_MSG_MAX] = {
 };
 ```
 
-`nf_tables_commit` and `nf_tables_abort` both iterate through the `nft_net->commit_list` and handle each item in the list. `nf_tables_abort` is more relevant for our context so we'll focus on that. Items in the `nft_net->commit_list` are basically transaction objects, which encapsulate the type of update that needs to be done for an `nf_tables` object and a data structure containing the target object. When `nf_tables` objects are being created or destroyed, they are encapsulated in a `struct nft_trans` object and added to the `nft_net->commit_list`, eventually being processed together with other `nft_trans` instances at the end of processing a batch. Each `nft_trans` is removed from the list after it is processed.
+`nf_tables_commit` and `nf_tables_abort` both iterate through the `nft_net->commit_list` and handle each item in the list. `nf_tables_abort` is more relevant for our context so we'll focus on that. Items in the `nft_net->commit_list` are basically transaction objects, which encapsulate the type of update that needs to be done for an `nf_tables` object and a data structure containing the target object. When `nf_tables` objects are being created or destroyed, they are wrapped in a `struct nft_trans` object and added to the `nft_net->commit_list`, eventually being processed together with other `nft_trans` instances at the end of processing a batch. Each `nft_trans` is removed from the list after it is processed.
 
 ```c
 static int __nf_tables_abort(struct net *net, enum nfnl_abort_action action)
@@ -230,6 +230,7 @@ static void nft_trans_commit_list_add_tail(struct net *net, struct nft_trans *tr
 }
 ```
 
+# The vulnerability
 The actual bug is due to the ordering of [1] and [2] in `nft_set_elem_expr_alloc`. `nft_expr_init` is called regardless of the type of `nf_tables` expression and the check `if (!(expr->ops->type->flags & NFT_EXPR_STATEFUL))` is only performed subsequently. When the check at [2] fails, it goes to the error handling code and returns an error.
 
 ```c
@@ -263,7 +264,7 @@ err_set_elem_expr:
 	return ERR_PTR(err);
 }
 ```
-
+# Triggering the vulnerability
 To see how this is a problem that causes a UAF, we can examine what happens when we create certain `nf_tables` entities in a particular order. For example, we can create `nft_table`, `nft_set`, `nft_object`, `nft_set_elem` etc. `nft_set` and `nft_object` must belong to an `nft_table`, and `nft_set_elem` can be created as an element of an `nft_set`. We can also specify expressions and/or a reference to an `nft_object` when creating an `nft_set_elem`. To trigger a UAF, we will need to send two separate batches of messages to netlink. In the first batch, we use messages to create an `nft_table` and an `nft_set`, and in the second batch we create an `nft_object`, followed by an `nft_set_elem` with a reference to the created `nft_object`, and finally an `nft_set_elem` with an `nft_objref_map` expression. Note that the order of operations must be in that sequence.
 When creating an `nft_object`, recall that the object is added to an `nft_trans` and this `nft_trans` is added to an `nft_net->commit_list`. Meanwhile, the object is added to an `rhltable` for future lookups. This means that `nft_net->commit_list` will contain one `nft_trans` object upon `nft_object` creation.
 
@@ -388,7 +389,7 @@ static const struct nft_expr_ops nft_objref_map_ops = {
 static struct nft_expr_type nft_objref_type __read_mostly = {
         .name           = "objref",
         .select_ops     = nft_objref_select_ops,
-        .policy                 = nft_objref_policy,
+        .policy         = nft_objref_policy,
         .maxattr        = NFTA_OBJREF_MAX,
         .owner          = THIS_MODULE,
 };
@@ -643,9 +644,7 @@ static void nft_obj_destroy(const struct nft_ctx *ctx, struct nft_object *obj)
 }
 ```
 
----
-
-## Exploitation
+# Exploitation
 
 This section will detail how the use-after-free can be leveraged to escalate privileges from an unprivileged user to root.
 
@@ -705,7 +704,7 @@ void __nla_put(struct sk_buff *skb, int attrtype, int attrlen,
 
 So when another entity gets allocated into the freed memory location, whatever is at the offset of the `nft_object`'s `key.name` member is treated as the source pointer for the memcpy, leaking whatever data lies at that location. This happens to be offset 32 of the `nft_object` and the `nft_object` is allocated on the kmalloc-256 slab.
 
-### Leaking the address of an `nft_set`
+## Leaking the address of an `nft_set`
 
 A candidate to leak an initial memory address from a heap object is to craft a specific `nft_rule` that is large enough to be allocated with kmalloc-256. An `nft_rule` can contain multiple `nft_expr` that can be specified when creating the rule. The size of an `nft_rule` is 24 bytes (not counting the expressions and userdata it contains) and has the following structure.
 
@@ -817,7 +816,7 @@ void *kmemdup(const void *src, size_t len, gfp_t gfp)
 
 To reiterate, we wanted to leak our anonymous set's address next and all that needs to be done here is to write the leaked address of the table's `sets` member at offset 32 of the `nft_chain` userdata (which we create to be size 256) and do a heap spray. Afterwards, perform the read with a netlink message of type `NFT_MSG_GETSETELEM`.
 
-### Bypassing KASLR
+## Bypassing KASLR
 
 We want to begin by obtaining the base address of the loaded `nf_tables` `.text` section. Initially, we want to leak a function pointer for an `nf_tables` function using the leaked set address that we obtained and then use that to get the `nf_tables` base address. A prime candidate is the `set->ops` pointer (a pointer to `nft_set_ops`). This is at offset 192 of the set so we just use the read primitive to read whatever is stored at the set base address + 192. Next, we can leak the `ops->lookup` function pointer which is at offset 0 from the beginning of `nft_set_ops`. This will leak the address of the function `nft_hash_lookup` because our set has its actual `ops` assigned to be `nft_set_hash_type.ops` since it is of type `nft_set_hash_type`. The `ops` that is assigned can be controlled by flags set by the user when creating the set. 
 
@@ -853,9 +852,9 @@ const struct nft_set_type nft_set_hash_type = {
 
 Using the address of this function we can get the base address of the `.text` section of `nf_tables`. With the `nf_tables` base address, we can use it to leak a function in the `.text` section of `vmlinux` itself. Since there are a plethora of `kfree` calls within the `nf_tables_api`, we can use the relative offset of those calls to get the address of the actual `kfree` function. A candidate to achieve this is the function `nft_set_destroy`, which contains a call to `kfree`. We simply trigger the read primitive using the `nf_tables` base address plus `kfree` invocation offset within `nft_set_destroy`. With the relative jump offset to the true `kfree` function in `nft_set_destroy`, we can determine the `kfree` function definition address and hence the base address of the kernel `.text` section.
 
-### Hijacking execution flow
+## Hijacking execution flow
 
-#### Leaking the address of an `nft_object`
+### Leaking the address of an `nft_object`
 
 One way of triggering a ROP chain to hijack execution flow is to make use of the `eval` function pointer of the `ops` member of an `nft_object`. This function pointer can be easily triggered by just registering an `nft_expr` of `objref` type as part of a rule and then sending a packet which will cause this expression to be processed. To execute our ROP chain, we leverage the UAF to cause a type confusion where the supposed `eval` function pointer is actually pointing to some region in memory containing our payload. An `nft_expr` of `objref` type holds a pointer to an `nft_object` as its private data [1] and upon evaluation, it simply delegates the evaluation to its `nft_object`'s `eval` function [2]. Since our UAF involves a freed `nft_object` that we can freely replace, this makes an `nft_expr` of `objref` type a perfect candidate to abuse for hijacking execution flow.
 
@@ -1040,7 +1039,7 @@ static int nft_add_set_elem(struct nft_ctx *ctx, struct nft_set *set,
 
 We only have one `nft_set_elem` in our set, and to easily find its `node` member within the set's hash table, we can ensure the table contains only one linked list (i.e. one hash bucket). This is controllable when creating the set. As a result, the `node` of our `nft_set_elem` can be found in the linked list at index 0 of the set's hash table. Since that list contains only one entry (we created only one set elem successfully), we can leak the address of the `node` member of the `nft_hash_elem` by applying our read primitive to the address of the hash table (a `struct hlist_head`), which simply holds a pointer to the first `hlist_node`. With the address of the set elem's `hlist_node`, we can then leak the freed `nft_object`'s address, since it lies within the `nft_set_ext` that follows the `hlist_node` inside the `nft_hash_elem`. We just need to compute the appropriate offsets from the `hlist_node` to the `nft_object` pointer within the `nft_set_ext`. With the leaked address, we now know the address we need the `eval` function pointer to point to.
 
-#### Creating an objref expression trigger for ROP
+### Creating an objref expression trigger for ROP
 
 The next step is to create an `objref` expression to an `nft_object` that fills the UAF slot, which is then freed and replaced with arbitrary data after. We perform a heap spray of `nft_object`s, find out which object was allocated into the previous freed memory location, create an `objref` expression to that particular object and finally destroy the `nft_object` again, while the `objref` continues to hold a pointer to the `nft_object`. The issue here is that the object now has use = 1 (which is a reference counting mechanism for `nft_object`s) after creating an `objref` that holds a pointer to it and it cannot be deleted directly by sending a netlink message of type `NFT_MSG_DELOBJ`. However, this new object that we formed the `objref` expression to now lies in the UAF slot, and the `nft_set_elem` in our anonymous set still mistakenly assumes it's holding a valid pointer to an `nft_object` there. When we delete this set elem from the set without specifying the exact set elem to delete, `nf_tables_delsetelem` is called which calls `nft_set_flush` [1] and this in turn calls `nft_setelem_flush` [2] for every set elem in the set. `nft_setelem_flush` invokes `nft_setelem_data_deactivate` [3] which decrements the use of the `nft_object` it is referencing [4].
 
@@ -1127,6 +1126,6 @@ static void nft_setelem_data_deactivate(const struct net *net,
 
 This means that after we successfully delete the set elem, the `nft_object` it is referencing now has a use count of 0 and we can delete it by just sending a `NFT_MSG_DELOBJ` netlink message that will invoke `nf_tables_delobj` to delete the object, leaving us with an `objref` expression pointing to a freed slot that we can now fill with arbitrary data specified by an `nft_chain`'s userdata.
 
-#### ROP chain execution and namespace re-association
+### ROP chain execution and namespace re-association
 
  A point to note is that the `objref` expression belongs to an `nft_rule` and that rule is actually added to a basechain in `nf_tables`. A basechain is registered with a netfilter hook (in our case we set it to be an output hook) and this would act as a filter for outgoing packets for the system as rules in that chain will be used to process the traffic. In order to actually trigger the ROP chain, we just have to send a UDP datagram using the `sendto` syscall. This will result in `nft_do_chain` processing every expression in every rule for the chain, eventually invoking the `eval` function pointer (pointing to `nft_objref_eval`) on our `objref` expression. This triggers `obj->ops->eval` of the `nft_object` pointer stored in the `objref` expression. Recall that offset 128 from the start of the `nft_object` is where the `obj->ops->eval` function pointer is supposedly located. This means that if we spray `nft_chain`s, with ROP chain contents at the beginning of the chain's `userdata` and offset 128 storing the starting address of the UAF slot, this will kick off execution of our shellcode. As the `eval` function is called with the `nft_object` (replaced with chain `userdata` now) itself as the first parameter, we can first perform a stack pivot in the ROP chain using a gadget similar to `push rdi; pop rsp; ret;`. In the rest of the ROP chain, the `init` process' credentials are committed using `commit_creds(init_cred)` and `swapgs_restore_regs_and_ret_to_usermode` is used to cleanly return to usermode, with the RIP in userland pointing to a function in the exploit code responsible for escaping the namespace jails and spawning a shell. The namespace jails are escaped using the `setns` syscall (for instance `setns(open("/proc/1/ns/net", O_RDONLY), 0);`) which re-associates that namespace of the process with that of the init process.

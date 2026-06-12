@@ -23,6 +23,11 @@ layout: default
     </p>
   </header>
 
+  <nav id="post-toc" class="post-toc" aria-label="Table of contents" hidden>
+    <button class="toc-toggle" type="button" aria-expanded="false">Contents</button>
+    <div class="toc-body"></div>
+  </nav>
+
   <div class="post-content e-content" itemprop="articleBody">
     {{ content }}
   </div>
@@ -33,3 +38,64 @@ layout: default
 
   <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
 </article>
+
+<script>
+(function () {
+  var content = document.querySelector('.post-content');
+  var toc = document.getElementById('post-toc');
+  if (!content || !toc) return;
+
+  var headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  if (!headings.length) { toc.parentNode.removeChild(toc); return; }
+
+  var minLevel = 6;
+  Array.prototype.forEach.call(headings, function (h) {
+    var lvl = parseInt(h.tagName.charAt(1), 10);
+    if (lvl < minLevel) minLevel = lvl;
+  });
+
+  var ul = document.createElement('ul');
+  ul.className = 'toc-list';
+  var map = {};
+
+  Array.prototype.forEach.call(headings, function (h) {
+    if (!h.id) {
+      h.id = h.textContent.trim().toLowerCase()
+        .replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '');
+    }
+    var level = parseInt(h.tagName.charAt(1), 10);
+    var li = document.createElement('li');
+    li.className = 'toc-' + h.tagName.toLowerCase();
+    var a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    a.style.paddingLeft = (10 + (level - minLevel) * 14) + 'px';
+    li.appendChild(a);
+    ul.appendChild(li);
+    map[h.id] = a;
+  });
+
+  toc.querySelector('.toc-body').appendChild(ul);
+  toc.removeAttribute('hidden');
+
+  var toggle = toc.querySelector('.toc-toggle');
+  toggle.addEventListener('click', function () {
+    var open = toc.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  if ('IntersectionObserver' in window) {
+    var current = null;
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          if (current) current.classList.remove('active');
+          current = map[e.target.id];
+          if (current) current.classList.add('active');
+        }
+      });
+    }, { rootMargin: '0px 0px -75% 0px', threshold: 0 });
+    Array.prototype.forEach.call(headings, function (h) { obs.observe(h); });
+  }
+})();
+</script>
